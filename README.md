@@ -4,7 +4,7 @@ It is a very barebones project, but I decided to upload it already because I was
 
 ## Video Demo
 
-https://youtu.be/pNBjng4TRW4
+<https://youtu.be/pNBjng4TRW4>
 
 ## Description
 
