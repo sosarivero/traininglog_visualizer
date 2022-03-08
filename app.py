@@ -1,13 +1,8 @@
 import streamlit as st
 import pandas as pd
-import altair as alt
 
 
-st.write(
-    """
-# Simple lift history visualization app.
-"""
-)
+st.write("# Simple lift history visualization app.")
 
 user_file = st.file_uploader(label="Import your Strong.app data.", type=["csv"])
 
@@ -18,36 +13,38 @@ if user_file is not None:
         sep=";",
         # Select only the columns necessary for the visualization.
         usecols=["Date", "Exercise Name", "Weight", "Reps"],
+        parse_dates=["Date"],
     )
     # Adds an E1RM to the df.
     df["E1RM"] = df["Weight"] / (1.0278 - 0.0278 * df["Reps"])
 
     # Reformats the date by deleting the hour timestamp.
-    for date in df["Date"]:
-        splitted = date.split(" ")
-        df["Date"] = splitted[0]
+    df["Date"] = df["Date"].dt.strftime("%Y-%m-%d")
+    df = df.sort_values("E1RM", ascending=False).drop_duplicates("Date")
+    df = df.sort_values("Date")
+    df = df.set_index("Date")
 
     # Get a set of all the exercise names in the df.
     exercises = set(df["Exercise Name"])
     # Dropdown menus to choose which exercises to analyze
-    exercise_one = st.selectbox("Select your primary Squat", exercises)
-    exercise_two = st.selectbox("Select your primary Bench Press", exercises)
-    exercise_three = st.selectbox("Select your primary Deadlift", exercises)
+    exercise_one = st.selectbox("Select the exercise to show", exercises)
 
     # Gets the info from the lift by searching with the name.
     squat_info = df.loc[df["Exercise Name"] == exercise_one]
-    # Creates a new column in which the one-rep max is calculated.
-    bench_info = df.loc[df["Exercise Name"] == "Bench Press (Barbell)"]
-    deadlift_info = df.loc[df["Exercise Name"] == "Deadlift (Barbell)"]
 
-    squat_info = squat_info.set_index("Date").to_dict()["E1RM"]
-
-    output_dict = {}
+    squat_dict = squat_info["E1RM"].to_dict()
     highest = 0
+    pr_dict = {}
+    for date, weight in squat_dict.items():
+        weight = int(weight)
+        if weight > highest:
+            highest = weight
+            pr_dict[date] = weight
 
-    for key, value in squat_info.items():
-        if value > highest:
-            output_dict[key] = int(value)
-            highest = value
+    personal_bests = pd.DataFrame.from_dict(pr_dict, orient="index")
 
-    st.write(output_dict)
+    col1, col2 = st.columns(2)
+    st.write("## Line chart of performances.")
+    st.line_chart(squat_info["E1RM"])
+    st.write("## History of personal bests.")
+    st.bar_chart(personal_bests)
